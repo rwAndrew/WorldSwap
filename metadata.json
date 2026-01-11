@@ -1,0 +1,8 @@
+{
+  "name": "WorldSwap - Moment Exchange",
+  "description": "An anonymous photo-sharing experience where you swap a moment of your life for 10 glimpses of the world. Capture, upload, and explore the globe through the eyes of others.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}
