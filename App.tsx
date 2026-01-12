@@ -41,8 +41,8 @@ const TRANSLATIONS = {
     swipe_tip: "Swipe to explore"
   },
   zh: {
-    title: "世界交換",
-    tagline: "100% 真實瞬間。拒絕虛假，拒絕圖庫。",
+    title: "視界交換",
+    tagline: "把你眼前的視界，和世界上的陌生人交換",
     capture_prompt: "捕捉當下瞬間以開始交換",
     anonymous: "匿名機制",
     realtime: "即時互動",
