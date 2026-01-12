@@ -42,7 +42,7 @@ const TRANSLATIONS = {
   },
   zh: {
     title: "視界交換",
-    tagline: "把你眼前的視界，和世界上的陌生人交換",
+    tagline: "和陌生人交換你的視界",
     capture_prompt: "捕捉當下瞬間以開始交換",
     anonymous: "匿名機制",
     realtime: "即時互動",
@@ -62,7 +62,7 @@ const TRANSLATIONS = {
       ? "目前池中沒有其他瞬間。你是今天的第一位探索者，你的照片已為下一位用戶準備就緒。"
       : `你今天與來自 ${c} 個國家的 ${n} 位真實用戶建立了連結。`,
     come_back: "再次分享瞬間",
-    privacy_note: "世界交換由真人驅動。真實性是我們的核心。",
+    privacy_note: "視界交換由真人驅動。真實性是我們的核心。",
     loading_stamping: "正在標記位置...",
     loading_searching: "正在訪問全球照片池...",
     loading_connecting: "獲取真實瞬間中...",
@@ -109,7 +109,6 @@ const App: React.FC = () => {
         const info = await getLocationName(latitude, longitude);
         setUserLoc({ ...info, lat: latitude, lng: longitude });
       }, () => {
-        // Fallback for location denial
         setUserLoc({ city: "Unknown", country: "Earth", city_zh: "未知", country_zh: "地球", lat: 0, lng: 0 });
       });
     }
@@ -183,30 +182,30 @@ const App: React.FC = () => {
     switch (state) {
       case AppState.LANDING:
         return (
-          <div className="flex flex-col items-center justify-center min-h-screen p-6 text-center space-y-10 animate-fade-in-up">
-            <div className="space-y-3">
-              <h1 className="text-6xl font-black tracking-tighter bg-gradient-to-b from-white to-zinc-600 bg-clip-text text-transparent">
+          <div className="flex flex-col items-center justify-center min-h-screen p-6 text-center space-y-12 animate-fade-in-up">
+            <div className="space-y-4 pt-12">
+              <h1 className="text-7xl font-black tracking-tighter bg-gradient-to-b from-white to-zinc-700 bg-clip-text text-transparent">
                 {t.title}
               </h1>
-              <p className="text-zinc-500 text-lg font-medium max-w-xs mx-auto">
+              <p className="text-zinc-500 text-lg font-medium max-w-xs mx-auto leading-relaxed">
                 {t.tagline}
               </p>
             </div>
             
             <button 
               onClick={() => setState(AppState.CAPTURING)}
-              className="w-full aspect-square max-w-[320px] relative rounded-[3rem] overflow-hidden glass border-white/10 group shadow-2xl transition-transform active:scale-95"
+              className="w-full aspect-square max-w-[340px] relative rounded-[4rem] overflow-hidden glass border-white/10 group shadow-[0_0_100px_rgba(255,255,255,0.05)] transition-transform active:scale-95"
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-zinc-800 to-black group-hover:scale-110 transition-transform duration-700" />
-              <div className="absolute inset-0 flex flex-col items-center justify-center space-y-4">
-                <div className="w-20 h-20 rounded-full border border-white/20 flex items-center justify-center bg-white/5 backdrop-blur-md">
-                   <span className="text-4xl">📸</span>
+              <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 to-black group-hover:scale-105 transition-transform duration-700" />
+              <div className="absolute inset-0 flex flex-col items-center justify-center space-y-6">
+                <div className="w-24 h-24 rounded-full border border-white/10 flex items-center justify-center bg-white/5 backdrop-blur-xl shadow-inner">
+                   <span className="text-5xl">📸</span>
                 </div>
-                <p className="font-black text-white text-[10px] tracking-[0.3em] uppercase">{t.capture_prompt}</p>
+                <p className="font-black text-white text-[11px] tracking-[0.4em] uppercase opacity-80">{t.capture_prompt}</p>
               </div>
             </button>
 
-            <div className="flex gap-8 text-[9px] text-zinc-600 font-black tracking-[0.4em] uppercase">
+            <div className="flex gap-8 text-[10px] text-zinc-600 font-black tracking-[0.4em] uppercase opacity-60">
               <span>{t.anonymous}</span>
               <span>{t.realtime}</span>
               <span>{t.global}</span>
@@ -220,10 +219,10 @@ const App: React.FC = () => {
       case AppState.UPLOADING:
         return (
           <div className="flex flex-col items-center justify-center min-h-screen p-6 text-center space-y-12 animate-scale-in">
-            <div className="relative w-56 h-56 flex items-center justify-center">
+            <div className="relative w-64 h-64 flex items-center justify-center">
               <div className="absolute inset-0 border border-white/5 rounded-full animate-pulse" />
-              <div className="absolute inset-[-10px] border border-dashed border-white/10 rounded-full animate-[spin_8s_linear_infinite]" />
-              <div className="w-40 h-40 rounded-full overflow-hidden border border-white/20 shadow-2xl">
+              <div className="absolute inset-[-15px] border border-dashed border-white/10 rounded-full animate-[spin_10s_linear_infinite]" />
+              <div className="w-48 h-48 rounded-full overflow-hidden border border-white/20 shadow-2xl">
                 {userPhoto && <img src={userPhoto} className="w-full h-full object-cover opacity-60 grayscale" alt="Me" />}
               </div>
             </div>
@@ -262,22 +261,18 @@ const App: React.FC = () => {
             </div>
 
             <div 
-              className={`relative flex-grow rounded-[3rem] overflow-hidden shadow-[0_50px_100px_rgba(0,0,0,0.8)] border border-white/5 bg-zinc-900 swipe-card transition-all duration-100 ease-out ${isExiting ? 'animate-card-exit' : ''}`}
+              className={`relative flex-grow rounded-[3.5rem] overflow-hidden shadow-[0_50px_100px_rgba(0,0,0,0.8)] border border-white/10 bg-zinc-900 swipe-card transition-all duration-100 ease-out ${isExiting ? 'animate-card-exit' : ''}`}
               style={{ transform: isExiting ? undefined : `translateX(${dragX}px) rotate(${rotation}deg) scale(${1 - Math.abs(dragX)/2000})`, opacity }}
               onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}
             >
-              <img src={current.imageUrl} className="w-full h-full object-cover pointer-events-none" alt="Moment" />
+              <img src={current.imageUrl} className="absolute inset-0 w-full h-full object-cover pointer-events-none" alt="Moment" />
               
-              <div className="absolute inset-x-0 bottom-0 p-8 bg-gradient-to-t from-black via-black/20 to-transparent">
-                <p className="text-white text-lg font-light italic opacity-90">"{current.caption}"</p>
-              </div>
-              
-              <div className="absolute top-6 right-6 flex flex-col items-end gap-2">
-                <div className="glass px-3 py-1.5 rounded-full text-[9px] font-black tracking-widest flex items-center gap-2">
+              <div className="absolute top-8 right-8 flex flex-col items-end gap-3">
+                <div className="glass px-4 py-2 rounded-full text-[10px] font-black tracking-widest flex items-center gap-2 shadow-xl">
                    <span className="w-1.5 h-1.5 bg-rose-500 rounded-full animate-pulse" />
                    {cityName} {formatTime(current.timestamp)}
                 </div>
-                <div className="bg-white text-black px-2 py-0.5 rounded-sm text-[8px] font-black uppercase tracking-tighter">{t.verified}</div>
+                <div className="bg-white text-black px-2.5 py-1 rounded-sm text-[9px] font-black uppercase tracking-tighter shadow-xl">{t.verified}</div>
               </div>
             </div>
 
@@ -305,44 +300,44 @@ const App: React.FC = () => {
         return (
           <div className="min-h-screen p-8 flex flex-col space-y-10 max-w-lg mx-auto py-16 animate-fade-in-up">
             <div className="text-center space-y-3">
-              <h1 className="text-4xl font-black tracking-tighter uppercase">{t.summary_title}</h1>
+              <h1 className="text-4xl font-black tracking-tighter uppercase leading-tight">{t.summary_title}</h1>
               <p className="text-zinc-500 font-bold text-sm tracking-wide">{hasMoments ? t.summary_desc : t.no_moments}</p>
             </div>
 
-            <div className="glass rounded-[2.5rem] p-8 space-y-8 border-white/5 shadow-2xl">
-              <div className="flex justify-between items-center border-b border-white/5 pb-6">
+            <div className="glass rounded-[3rem] p-10 space-y-10 border-white/10 shadow-2xl">
+              <div className="flex justify-between items-center border-b border-white/10 pb-8">
                 <h3 className="font-black text-zinc-400 text-xs tracking-[0.2em] uppercase">{t.today_exchange}</h3>
-                <span className="text-green-500 text-[10px] font-black tracking-widest bg-green-500/10 px-3 py-1 rounded-full border border-green-500/20">{t.complete}</span>
+                <span className="text-green-500 text-[10px] font-black tracking-widest bg-green-500/10 px-4 py-1.5 rounded-full border border-green-500/20">{t.complete}</span>
               </div>
               
-              <div className="grid grid-cols-2 gap-8">
-                <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-10">
+                <div className="space-y-4">
                   <p className="text-zinc-600 text-[9px] uppercase font-black tracking-widest">{t.you_shared}</p>
-                  <div className="w-full aspect-square rounded-3xl overflow-hidden border border-white/10 shadow-xl">
+                  <div className="w-full aspect-[3/4] rounded-3xl overflow-hidden border border-white/10 shadow-xl bg-zinc-900">
                     {userPhoto && <img src={userPhoto} className="w-full h-full object-cover" alt="Me" />}
                   </div>
-                  <p className="text-[10px] font-mono text-zinc-500 uppercase">{lang === 'zh' ? userLoc?.city_zh : userLoc?.city}, {lang === 'zh' ? userLoc?.country_zh : userLoc?.country}</p>
+                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-tight">{lang === 'zh' ? userLoc?.city_zh : userLoc?.city}, {lang === 'zh' ? userLoc?.country_zh : userLoc?.country}</p>
                 </div>
                 {hasMoments && (
-                   <div className="space-y-3">
+                   <div className="space-y-4">
                     <p className="text-zinc-600 text-[9px] uppercase font-black tracking-widest">{t.most_distant}</p>
-                    <div className="w-full aspect-square rounded-3xl overflow-hidden border border-white/10 shadow-xl bg-zinc-800">
-                      <img src={moments[0].imageUrl} className="w-full h-full object-cover opacity-80" alt="Far" />
+                    <div className="w-full aspect-[3/4] rounded-3xl overflow-hidden border border-white/10 shadow-xl bg-zinc-900">
+                      <img src={moments[0].imageUrl} className="w-full h-full object-cover" alt="Far" />
                     </div>
-                    <p className="text-[10px] font-mono text-zinc-500 uppercase">{lang === 'zh' ? moments[0].location.city_zh : moments[0].location.city}, {lang === 'zh' ? moments[0].location.country_zh : moments[0].location.country}</p>
+                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-tight">{lang === 'zh' ? moments[0].location.city_zh : moments[0].location.city}, {lang === 'zh' ? moments[0].location.country_zh : moments[0].location.country}</p>
                   </div>
                 )}
               </div>
 
-              <div className="bg-white/5 rounded-3xl p-6 text-center border border-white/5">
-                <p className="text-sm text-zinc-300 font-bold leading-relaxed italic">
+              <div className="bg-white/5 rounded-[2rem] p-8 text-center border border-white/5">
+                <p className="text-base text-zinc-200 font-medium leading-relaxed italic">
                   {t.connection_msg(moments.length, new Set(moments.map(m => m.location.country)).size)}
                 </p>
               </div>
             </div>
 
             <button onClick={() => { setState(AppState.LANDING); setCurrentIndex(0); setDragX(0); setIsExiting(false); }}
-              className="w-full py-6 bg-white text-black font-black rounded-[2rem] hover:bg-zinc-200 active:scale-95 transition-all tracking-[0.3em] uppercase text-xs shadow-2xl"
+              className="w-full py-6 bg-white text-black font-black rounded-[2.5rem] hover:bg-zinc-200 active:scale-95 transition-all tracking-[0.3em] uppercase text-xs shadow-2xl"
             >
               {t.come_back}
             </button>
@@ -358,12 +353,12 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col relative bg-black selection:bg-white selection:text-black">
       <button onClick={() => setLang(prev => prev === 'en' ? 'zh' : 'en')}
-        className="fixed top-8 right-8 z-[60] glass px-5 py-2.5 rounded-full text-[10px] font-black tracking-widest hover:bg-white/10 transition-colors uppercase"
+        className="fixed top-8 right-8 z-[60] glass px-5 py-2.5 rounded-full text-[10px] font-black tracking-widest hover:bg-white/20 transition-colors uppercase shadow-xl"
       >
         {lang === 'en' ? 'ZH' : 'EN'}
       </button>
-      <div className="fixed top-[-20%] right-[-20%] w-[80%] h-[80%] bg-blue-600/5 blur-[200px] rounded-full pointer-events-none" />
-      <div className="fixed bottom-[-20%] left-[-20%] w-[70%] h-[70%] bg-rose-600/5 blur-[200px] rounded-full pointer-events-none" />
+      <div className="fixed top-[-20%] right-[-20%] w-[80%] h-[80%] bg-blue-600/10 blur-[200px] rounded-full pointer-events-none" />
+      <div className="fixed bottom-[-20%] left-[-20%] w-[70%] h-[70%] bg-rose-600/10 blur-[200px] rounded-full pointer-events-none" />
       <main className="flex-grow z-10">{renderContent()}</main>
     </div>
   );
