@@ -8,7 +8,7 @@ import ReactionPicker from './components/ReactionPicker';
 
 const TRANSLATIONS = {
   en: {
-    title: "WorldSwap",
+    title: "Sight Link",
     tagline: "100% Real Moments. No fakes. No stock photos.",
     capture_prompt: "Capture your moment to enter",
     anonymous: "ANONYMOUS",
