@@ -1,8 +1,8 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
-// 修正後的寫法
-const ai = new GoogleGenerativeAI(import.meta.env.VITE_API_KEY);
+// Always initialize GoogleGenAI with a named parameter for apiKey using process.env.API_KEY
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export async function getLocationName(lat: number, lng: number): Promise<{ city: string; country: string; city_zh: string; country_zh: string }> {
   try {

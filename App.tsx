@@ -19,15 +19,15 @@ const TRANSLATIONS = {
     verified: "VERIFIED CAPTURE",
     finish_journey: "Finish Journey",
     next_glimpse: "Next Glimpse",
-    footprint_title: "Global Footprint",
-    footprint_desc: "The real locations of the moments you just saw.",
+    summary_title: "Connection Summary",
+    summary_desc: "The real people and places you connected with.",
     today_exchange: "Exchange Record",
     complete: "SUCCESS",
     you_shared: "You Shared",
     most_distant: "Most Distant",
     connection_msg: (n: number, c: number) => n === 0 
       ? "You are the first explorer today. Your moment is now waiting for the next person."
-      : `You connected with ${n} real people in ${c} countries.`,
+      : `You connected with ${n} real people across ${c} countries.`,
     come_back: "Share another moment",
     privacy_note: "WorldSwap is 100% human-driven. Honesty is our core.",
     loading_stamping: "Stamping location...",
@@ -52,8 +52,8 @@ const TRANSLATIONS = {
     verified: "真實拍攝",
     finish_journey: "結束旅程",
     next_glimpse: "下個瞬間",
-    footprint_title: "全球足跡",
-    footprint_desc: "你剛剛所見到的真實瞬間來源地。",
+    summary_title: "交換總結",
+    summary_desc: "你今天在世界上建立的真實連結。",
     today_exchange: "交換記錄",
     complete: "完成",
     you_shared: "你分享的瞬間",
@@ -68,7 +68,7 @@ const TRANSLATIONS = {
     loading_connecting: "獲取真實瞬間中...",
     loading_finalizing: "驗證真實性...",
     loading_desc: "我們只顯示來自真實用戶的拍攝照片。",
-    no_moments: "目前世界上沒有其他人的瞬間。你是今天的第一位探索者。",
+    no_moments: "目前世界上沒有其他人的瞬間. 你是今天的第一位探索者。",
     low_moments: (n: number) => `目前池中僅有 ${n} 個其他真實瞬間。`,
     next: "下一個",
     swipe_tip: "滑動探索"
@@ -108,6 +108,9 @@ const App: React.FC = () => {
         const { latitude, longitude } = pos.coords;
         const info = await getLocationName(latitude, longitude);
         setUserLoc({ ...info, lat: latitude, lng: longitude });
+      }, () => {
+        // Fallback for location denial
+        setUserLoc({ city: "Unknown", country: "Earth", city_zh: "未知", country_zh: "地球", lat: 0, lng: 0 });
       });
     }
   }, []);
@@ -118,7 +121,6 @@ const App: React.FC = () => {
     
     setLoadingMsg(t.loading_stamping);
     
-    // Simulate real database processing
     setTimeout(() => setLoadingMsg(t.loading_searching), 1000);
     setTimeout(() => setLoadingMsg(t.loading_connecting), 2000);
     setTimeout(() => setLoadingMsg(t.loading_finalizing), 3000);
@@ -130,7 +132,7 @@ const App: React.FC = () => {
     setTimeout(() => {
       setMoments(otherMoments);
       if (otherMoments.length === 0) {
-        setState(AppState.SUMMARY); // Skip swiping if no photos exist
+        setState(AppState.SUMMARY);
       } else {
         setState(AppState.SWIPING);
       }
@@ -303,8 +305,8 @@ const App: React.FC = () => {
         return (
           <div className="min-h-screen p-8 flex flex-col space-y-10 max-w-lg mx-auto py-16 animate-fade-in-up">
             <div className="text-center space-y-3">
-              <h1 className="text-4xl font-black tracking-tighter uppercase">{t.footprint_title}</h1>
-              <p className="text-zinc-500 font-bold text-sm tracking-wide">{hasMoments ? t.footprint_desc : t.no_moments}</p>
+              <h1 className="text-4xl font-black tracking-tighter uppercase">{t.summary_title}</h1>
+              <p className="text-zinc-500 font-bold text-sm tracking-wide">{hasMoments ? t.summary_desc : t.no_moments}</p>
             </div>
 
             <div className="glass rounded-[2.5rem] p-8 space-y-8 border-white/5 shadow-2xl">
