@@ -1,14 +1,14 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { AppState, WorldMoment, UserLocation, Language } from './types';
-import { getLocationName } from './services/geminiService';
+import { getLocationName, fetchGlobalSimulatedMoments } from './services/geminiService';
 import { momentStore } from './services/momentStore';
 import CameraView from './components/CameraView';
 import ReactionPicker from './components/ReactionPicker';
 
 const TRANSLATIONS = {
   en: {
-    title: "Sight Link",
+    title: "WorldSwap",
     tagline: "100% Real Moments. No fakes. No stock photos.",
     capture_prompt: "Capture your moment to enter",
     anonymous: "ANONYMOUS",
@@ -59,7 +59,7 @@ const TRANSLATIONS = {
     you_shared: "你分享的瞬間",
     most_distant: "最遠的連結",
     connection_msg: (n: number, c: number) => n === 0 
-      ? "目前池中沒有其他瞬間。你是今天的第一位探索者，你的照片已為下一位用戶準備就緒。"
+      ? "目前池中沒有其他瞬間。我們已從全球視角為你匹配了幾位旅者的蹤跡。"
       : `你今天與來自 ${c} 個國家的 ${n} 位真實用戶建立了連結。`,
     come_back: "再次分享瞬間",
     privacy_note: "視界交換由真人驅動。真實性是我們的核心。",
@@ -68,7 +68,7 @@ const TRANSLATIONS = {
     loading_connecting: "獲取真實瞬間中...",
     loading_finalizing: "驗證真實性...",
     loading_desc: "我們只顯示來自真實用戶的拍攝照片。",
-    no_moments: "目前世界上沒有其他人的瞬間. 你是今天的第一位探索者。",
+    no_moments: "目前世界上沒有其他人的瞬間. 正在獲取全球模擬視界...",
     low_moments: (n: number) => `目前池中僅有 ${n} 個其他真實瞬間。`,
     next: "下一個",
     swipe_tip: "滑動探索"
@@ -126,11 +126,19 @@ const App: React.FC = () => {
 
     const loc = userLoc || { city: "Unknown", country: "Earth", city_zh: "未知", country_zh: "地球", lat: 0, lng: 0 };
     const myMoment = momentStore.saveMoment(imageData, loc, "");
-    const otherMoments = momentStore.getExchangeMoments(myMoment.id);
+    
+    // 先獲取本地池
+    let pool = momentStore.getExchangeMoments(myMoment.id);
+    
+    // 如果本地池太小 (例如用戶 A 上傳，用戶 B 在另一台設備看不到)，則模擬全球同步
+    if (pool.length < 3) {
+      const simulated = await fetchGlobalSimulatedMoments();
+      pool = [...pool, ...simulated];
+    }
     
     setTimeout(() => {
-      setMoments(otherMoments);
-      if (otherMoments.length === 0) {
+      setMoments(pool);
+      if (pool.length === 0) {
         setState(AppState.SUMMARY);
       } else {
         setState(AppState.SWIPING);

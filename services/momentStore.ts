@@ -16,19 +16,26 @@ export const momentStore = {
       imageUrl: photo,
       location,
       timestamp: new Date().toISOString(),
-      caption: caption || "Captured a moment.",
+      caption: caption || "",
       reactions: {}
     };
     
-    // Add to pool and keep only latest 50 to simulate a fresh rolling database
-    const updatedPool = [newMoment, ...pool].slice(0, 50);
+    // 邏輯：保留最新的 10 張，並預留最早的 5 張
+    let updatedPool = [newMoment, ...pool];
+    
+    if (updatedPool.length > 15) {
+      const latest10 = updatedPool.slice(0, 10);
+      const oldest5 = updatedPool.slice(-5);
+      updatedPool = [...latest10, ...oldest5];
+    }
+
     localStorage.setItem(STORE_KEY, JSON.stringify(updatedPool));
     return newMoment;
   },
 
   getExchangeMoments: (currentId: string): WorldMoment[] => {
     const pool = momentStore.getMoments();
-    // Filter out the current user's just-uploaded photo and return up to 10 others
+    // 過濾掉當前剛上傳的，並返回最多 10 張供交換
     return pool.filter(m => m.id !== currentId).slice(0, 10);
   }
 };
