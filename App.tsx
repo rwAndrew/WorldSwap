@@ -115,35 +115,52 @@ const App: React.FC = () => {
   }, []);
 
   const handleCapture = async (imageData: string) => {
+    // 立即進入加載狀態
     setUserPhoto(imageData);
     setState(AppState.UPLOADING);
     
+    // 設定計時訊息
     setLoadingMsg(t.loading_stamping);
-    
-    setTimeout(() => setLoadingMsg(t.loading_searching), 1000);
-    setTimeout(() => setLoadingMsg(t.loading_connecting), 2000);
-    setTimeout(() => setLoadingMsg(t.loading_finalizing), 3000);
+    const m1 = setTimeout(() => setLoadingMsg(t.loading_searching), 1000);
+    const m2 = setTimeout(() => setLoadingMsg(t.loading_connecting), 2000);
+    const m3 = setTimeout(() => setLoadingMsg(t.loading_finalizing), 3000);
 
-    const loc = userLoc || { city: "Unknown", country: "Earth", city_zh: "未知", country_zh: "地球", lat: 0, lng: 0 };
-    const myMoment = momentStore.saveMoment(imageData, loc, "");
-    
-    // 先獲取本地池
-    let pool = momentStore.getExchangeMoments(myMoment.id);
-    
-    // 如果本地池太小 (例如用戶 A 上傳，用戶 B 在另一台設備看不到)，則模擬全球同步
-    if (pool.length < 3) {
-      const simulated = await fetchGlobalSimulatedMoments();
-      pool = [...pool, ...simulated];
-    }
-    
-    setTimeout(() => {
-      setMoments(pool);
-      if (pool.length === 0) {
-        setState(AppState.SUMMARY);
-      } else {
-        setState(AppState.SWIPING);
+    try {
+      // 1. 本地存儲
+      const loc = userLoc || { city: "Unknown", country: "Earth", city_zh: "未知", country_zh: "地球", lat: 0, lng: 0 };
+      const myMoment = momentStore.saveMoment(imageData, loc, "");
+      
+      // 2. 獲取本地交換池
+      let pool = momentStore.getExchangeMoments(myMoment.id);
+      
+      // 3. 獲取模擬流（如果有需要）
+      if (pool.length < 3) {
+        try {
+          // 設定一個超時限制，避免卡死
+          const simulatedPromise = fetchGlobalSimulatedMoments();
+          const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve([]), 5000));
+          const simulated = await Promise.race([simulatedPromise, timeoutPromise]) as WorldMoment[];
+          pool = [...pool, ...simulated];
+        } catch (simErr) {
+          console.warn("Simulation fetch failed, proceeding with local pool", simErr);
+        }
       }
-    }, 4000);
+      
+      // 4. 強制等待至少 4 秒以確保用戶看完動畫訊息，然後切換狀態
+      setTimeout(() => {
+        setMoments(pool);
+        if (pool.length === 0) {
+          setState(AppState.SUMMARY);
+        } else {
+          setState(AppState.SWIPING);
+        }
+      }, 4000);
+
+    } catch (err) {
+      console.error("Critical capture handler error:", err);
+      // 萬一出錯，至少確保能退回 summary 或 landing，不要卡死
+      setTimeout(() => setState(AppState.SUMMARY), 4000);
+    }
   };
 
   const nextMoment = useCallback(() => {

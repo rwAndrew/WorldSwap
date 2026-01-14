@@ -20,13 +20,12 @@ export const momentStore = {
       reactions: {}
     };
     
-    // 邏輯：保留最新的 10 張，並預留最早的 5 張
+    // 邏輯：保留最新的 15 張，移除任何保留舊照片的規則
     let updatedPool = [newMoment, ...pool];
     
+    // 如果超過 15 張，裁切掉最舊的
     if (updatedPool.length > 15) {
-      const latest10 = updatedPool.slice(0, 10);
-      const oldest5 = updatedPool.slice(-5);
-      updatedPool = [...latest10, ...oldest5];
+      updatedPool = updatedPool.slice(0, 15);
     }
 
     localStorage.setItem(STORE_KEY, JSON.stringify(updatedPool));
@@ -35,7 +34,7 @@ export const momentStore = {
 
   getExchangeMoments: (currentId: string): WorldMoment[] => {
     const pool = momentStore.getMoments();
-    // 過濾掉當前剛上傳的，並返回最多 10 張供交換
-    return pool.filter(m => m.id !== currentId).slice(0, 10);
+    // 過濾掉當前剛上傳的，返回池中剩餘的所有照片（最多 14 張）
+    return pool.filter(m => m.id !== currentId);
   }
 };
