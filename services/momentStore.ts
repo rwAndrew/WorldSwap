@@ -5,11 +5,10 @@ import { WorldMoment, UserLocation } from '../types';
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 
-// 診斷日誌：這會在瀏覽器控制台顯示環境變數是否正確加載（不洩漏完整 Key）
+// 診斷日誌：這會在瀏覽器控制台顯示環境變數是否正確加載
 console.log("Supabase 配置檢查:", {
-  urlExists: !!supabaseUrl && supabaseUrl !== "null",
-  keyExists: !!supabaseAnonKey && supabaseAnonKey !== "null",
-  urlPrefix: supabaseUrl?.substring(0, 10)
+  urlExists: !!supabaseUrl && supabaseUrl !== "undefined" && supabaseUrl !== "null",
+  keyExists: !!supabaseAnonKey && supabaseAnonKey !== "undefined" && supabaseAnonKey !== "null",
 });
 
 export const isSupabaseConfigured = Boolean(
@@ -59,7 +58,7 @@ export const momentStore = {
         .limit(30);
 
       if (error) {
-        console.error("獲取資料失敗:", error.message, error.details);
+        console.error("獲取資料失敗:", error.message);
         return [];
       }
       return (data || []).map(item => ({
@@ -81,43 +80,33 @@ export const momentStore = {
     onProgress?: (msg: string) => void
   ): Promise<{ moments: WorldMoment[]; selfId: string }> => {
     if (!supabase) {
-      throw new Error("Supabase 未配置。請確認環境變數 SUPABASE_URL 與 SUPABASE_ANON_KEY 已設定。");
+      throw new Error("Supabase 未配置。請確認環境變數已在部署平台設定。");
     }
 
-    onProgress?.("正在準備圖片節點...");
+    onProgress?.("正在處理圖片...");
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`;
     const blob = base64ToBlob(imageData);
 
     // 1. 上傳到 Storage
-    onProgress?.("正在上傳至全球儲存節點...");
+    onProgress?.("正在上傳至雲端...");
     const { error: uploadError } = await supabase.storage
       .from(BUCKET_NAME)
       .upload(fileName, blob, { 
         contentType: 'image/jpeg', 
-        cacheControl: '3600',
         upsert: false
       });
 
     if (uploadError) {
-      console.error("Storage 上傳錯誤詳細資訊:", uploadError);
-      let msg = "上傳失敗。";
-      if (uploadError.message.includes("not found")) {
-        msg += ` 找不到儲存桶 "${BUCKET_NAME}"，請在 Supabase 建立它。`;
-      } else if (uploadError.message.includes("Row-level security")) {
-        msg += " RLS 政策拒絕寫入，請確認 Storage 政策已設為允許匿名 Insert。";
-      } else {
-        msg += ` 原因: ${uploadError.message}`;
-      }
-      throw new Error(msg);
+      console.error("Storage 錯誤:", uploadError);
+      throw new Error(`上傳失敗: ${uploadError.message}。請確認 Storage Bucket "${BUCKET_NAME}" 已建立並設為 Public。`);
     }
 
-    // 2. 獲取公開網址
+    // 2. 獲取網址
     const { data: urlData } = supabase.storage.from(BUCKET_NAME).getPublicUrl(fileName);
     const publicUrl = urlData.publicUrl;
-    console.log("圖片已上傳，網址:", publicUrl);
 
     // 3. 寫入資料表
-    onProgress?.("正在寫入交換資料庫...");
+    onProgress?.("正在同步視界...");
     const { data: insertData, error: insertError } = await supabase
       .from('moments')
       .insert({ 
@@ -129,11 +118,11 @@ export const momentStore = {
       .single();
 
     if (insertError) {
-      console.error("資料庫寫入錯誤詳細資訊:", insertError);
-      throw new Error(`資料庫寫入失敗: ${insertError.message}。請確認 'moments' 表存在且 RLS 已開啟。`);
+      console.error("DB 錯誤:", insertError);
+      throw new Error(`資料庫寫入失敗: ${insertError.message}。請確認 'moments' 表的 RLS 政策已設為允許 Insert。`);
     }
 
-    onProgress?.("同步完成！獲取全球視界中...");
+    onProgress?.("完成交換！");
     const all = await momentStore.getMoments();
     return { moments: all, selfId: insertData.id };
   }
