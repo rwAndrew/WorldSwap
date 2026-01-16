@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { WorldMoment, UserLocation } from '../types';
 
@@ -27,19 +26,14 @@ const BUCKET_NAME = 'moment-photos';
 
 function base64ToBlob(base64: string, contentType: string = 'image/jpeg') {
   try {
-    const splitData = base64.split(',');
-    if (splitData.length < 2) throw new Error("無效的 Base64 數據格式");
-    const byteCharacters = atob(splitData[1]);
-    const byteArrays = [];
-    for (let offset = 0; offset < byteCharacters.length; offset += 512) {
-      const slice = byteCharacters.slice(offset, offset + 512);
-      const byteNumbers = new Array(slice.length);
-      for (let i = 0; i < slice.length; i++) {
-        byteNumbers[i] = slice.charCodeAt(i);
-      }
-      byteArrays.push(new Uint8Array(byteNumbers));
+    const parts = base64.split(',');
+    const byteString = parts.length > 1 ? atob(parts[1]) : atob(parts[0]);
+    const ab = new ArrayBuffer(byteString.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteString.length; i++) {
+      ia[i] = byteString.charCodeAt(i);
     }
-    return new Blob(byteArrays, { type: contentType });
+    return new Blob([ab], { type: contentType });
   } catch (e) {
     console.error("Blob 轉換失敗:", e);
     throw new Error("圖片數據解析失敗，請嘗試重新拍攝");
@@ -79,7 +73,7 @@ export const momentStore = {
     onProgress?: (msg: string) => void
   ): Promise<{ moments: WorldMoment[]; selfId: string }> => {
     if (!supabase) {
-      throw new Error("Supabase 未正確配置。請在 Vercel 或環境變數中設定 SUPABASE_URL 與 SUPABASE_ANON_KEY。");
+      throw new Error("Supabase 未正確配置。請在部署環境中設定 SUPABASE_URL 與 SUPABASE_ANON_KEY。");
     }
 
     onProgress?.("正在處理圖片節點...");
@@ -98,7 +92,7 @@ export const momentStore = {
 
     if (uploadError) {
       console.error("Storage 上傳失敗詳情:", uploadError);
-      throw new Error(`[上傳失敗] ${uploadError.message}。請檢查 '${BUCKET_NAME}' 儲存桶是否已設為 Public 並開放寫入權限。`);
+      throw new Error(`[上傳失敗] ${uploadError.message}。請確認 Storage Bucket "${BUCKET_NAME}" 已建立並設為 Public。`);
     }
 
     const { data: urlData } = supabase.storage.from(BUCKET_NAME).getPublicUrl(fileName);
@@ -118,7 +112,7 @@ export const momentStore = {
 
     if (insertError) {
       console.error("Database 寫入失敗詳情:", insertError);
-      throw new Error(`[資料庫錯誤] ${insertError.message}。請確認 'moments' 表格已建立且 RLS 政策允許匿名插入。`);
+      throw new Error(`[資料庫錯誤] ${insertError.message}。請確認 'moments' 表格已開啟 RLS 政策。`);
     }
 
     onProgress?.("交換完成，正在更新視界...");
