@@ -117,26 +117,27 @@ const App: React.FC = () => {
         console.warn("AI 懷疑這張照片不是真實拍攝:", authResult.reason);
       }
 
-      // 2. 雲端同步 (真正上傳至 Supabase)
+      // 2. 雲端同步
       setLoadingMsg(t.loading_connecting);
       const updatedPool = await momentStore.syncWithGlobal(imageData, loc);
       
-      // 3. 獲取排除自己的交換池
-      const finalPool = updatedPool.filter(m => m.imageUrl !== imageData).slice(0, 10);
+      // 3. 獲取交換池 (排除自己剛拍的這張)
+      // 注意：如果是第一個用戶，這裡會是空的
+      const cloudExchange = updatedPool.filter(m => !imageData.includes(m.imageUrl.split('/').pop() || 'never_match')).slice(0, 10);
 
-      // 若雲端暫無其他數據，回退至 AI 模擬流以確保體驗，但未來應移除
-      if (finalPool.length === 0) {
+      if (cloudExchange.length < 3) {
+        // 如果雲端真人照片太少，混入一些 AI 模擬的全球照片
         const simulated = await fetchGlobalSimulatedMoments();
-        setMoments(simulated);
+        setMoments([...cloudExchange, ...simulated].slice(0, 10));
       } else {
-        setMoments(finalPool);
+        setMoments(cloudExchange);
       }
 
       setState(AppState.SWIPING);
 
-    } catch (err) {
-      console.error("Cloud Sync Failed:", err);
-      setState(AppState.SUMMARY);
+    } catch (err: any) {
+      alert(`交換失敗: ${err.message || '未知錯誤'}`);
+      setState(AppState.LANDING);
     }
   };
 
