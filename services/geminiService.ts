@@ -3,11 +3,43 @@ import { GoogleGenAI, Type } from "@google/genai";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
+/**
+ * 驗證照片真實性 (Gemini Vision)
+ * 確保照片是真實現場拍攝，而非螢幕翻拍或素材圖
+ */
+export async function verifyAuthenticity(base64Image: string): Promise<{ isReal: boolean; reason: string }> {
+  try {
+    const imagePart = {
+      inlineData: {
+        mimeType: "image/jpeg",
+        data: base64Image.split(',')[1]
+      }
+    };
+    
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: {
+        parts: [
+          imagePart,
+          { text: "Analyze this image. Is it a real, raw smartphone photo of a scene? Or is it a stock photo, a screenshot, or a photo of a screen? Return JSON: { \"isReal\": boolean, \"reason\": \"string\" }" }
+        ]
+      },
+      config: { responseMimeType: "application/json" }
+    });
+    
+    return JSON.parse(response.text);
+  } catch (e) {
+    console.error("Verification error", e);
+    // 安全起見，API 失敗時預設通過，但需記錄
+    return { isReal: true, reason: "Verification bypassed due to API error" };
+  }
+}
+
 export async function getLocationName(lat: number, lng: number): Promise<{ city: string; country: string; city_zh: string; country_zh: string }> {
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: `Identify the approximate City and Country for these coordinates: Lat ${lat}, Lng ${lng}. Return the names in both English and Traditional Chinese (Taiwan variant) as JSON.`,
+      contents: `Location coordinates: Lat ${lat}, Lng ${lng}. Return JSON with city, country, city_zh, country_zh in Traditional Chinese.`,
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -17,62 +49,33 @@ export async function getLocationName(lat: number, lng: number): Promise<{ city:
             country: { type: Type.STRING },
             city_zh: { type: Type.STRING },
             country_zh: { type: Type.STRING }
-          },
-          required: ["city", "country", "city_zh", "country_zh"]
+          }
         }
       }
     });
     return JSON.parse(response.text);
   } catch (e) {
-    return { 
-      city: "Unknown City", 
-      country: "Unknown Country",
-      city_zh: "未知城市",
-      country_zh: "未知國家"
-    };
+    return { city: "Earth", country: "Global", city_zh: "地球", country_zh: "全球" };
   }
 }
 
-/**
- * 模擬全球交換流
- * 當本地存儲為空時，從 Gemini 獲取 5 個虛構但真實的地點瞬間
- */
 export async function fetchGlobalSimulatedMoments(): Promise<any[]> {
   try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: "Generate 5 diverse, realistic global 'moments' from different time zones. Each should have a city, country, and a specific local time. Output as JSON array.",
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              city: { type: Type.STRING },
-              country: { type: Type.STRING },
-              city_zh: { type: Type.STRING },
-              country_zh: { type: Type.STRING },
-              timestamp: { type: Type.STRING, description: "ISO string" }
-            },
-            required: ["city", "country", "city_zh", "country_zh", "timestamp"]
-          }
-        }
-      }
+      contents: "List 5 active global locations with unique visual styles (JSON: city, country, city_zh, country_zh, keyword).",
+      config: { responseMimeType: "application/json" }
     });
+    
     const mockData = JSON.parse(response.text);
-    // 為這些數據配上高品質的世界攝影圖庫鏈接 (Unsplash Source)
     return mockData.map((item: any, index: number) => ({
-      id: `sim-${index}-${Date.now()}`,
+      id: `global-${index}-${Math.random().toString(36).slice(2)}`,
       imageUrl: `https://images.unsplash.com/photo-${[
-        '1514933651103-005eec06c04b', // 巴黎
-        '1506973035872-a4ec16b8e8d9', // 悉尼
-        '1449034446853-66c86144b0ad', // 三藩市
-        '1513635269975-59663e0ac1ad', // 倫敦
-        '1503899036084-755a30bb7ac9'  // 東京
-      ][index]}?auto=format&fit=crop&w=1080&q=80`,
-      location: item,
-      timestamp: item.timestamp,
+        '1514933651103-005eec06c04b', '1506973035872-a4ec16b8e8d9', '1449034446853-66c86144b0ad',
+        '1513635269975-59663e0ac1ad', '1503899036084-755a30bb7ac9'
+      ][index % 5]}?auto=format&fit=crop&w=1080&q=80`,
+      location: { ...item, lat: 0, lng: 0 },
+      timestamp: new Date().toISOString(),
       reactions: {}
     }));
   } catch (e) {

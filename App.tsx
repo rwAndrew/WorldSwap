@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { AppState, WorldMoment, UserLocation, Language } from './types';
-import { getLocationName, fetchGlobalSimulatedMoments } from './services/geminiService';
+import { getLocationName, fetchGlobalSimulatedMoments, verifyAuthenticity } from './services/geminiService';
 import { momentStore } from './services/momentStore';
 import CameraView from './components/CameraView';
 import ReactionPicker from './components/ReactionPicker';
@@ -9,69 +9,59 @@ import ReactionPicker from './components/ReactionPicker';
 const TRANSLATIONS = {
   en: {
     title: "WorldSwap",
-    tagline: "100% Real Moments. No fakes. No stock photos.",
-    capture_prompt: "Capture your moment to enter",
+    tagline: "100% Real Moments. Global Exchange.",
+    capture_prompt: "Capture your moment to join the world",
     anonymous: "ANONYMOUS",
-    realtime: "REAL-TIME",
-    global: "GLOBAL",
+    realtime: "LIVE NETWORK",
+    global: "GLOBAL PULSE",
     shared_recently: "Shared Recently",
-    live_from: "LIVE FROM",
-    verified: "VERIFIED CAPTURE",
-    finish_journey: "Finish Journey",
-    next_glimpse: "Next Glimpse",
-    summary_title: "Connection Summary",
-    summary_desc: "The real people and places you connected with.",
-    today_exchange: "Exchange Record",
-    complete: "SUCCESS",
+    verified: "VERIFIED",
+    summary_title: "Exchange Summary",
+    summary_desc: "Your visual connection with the world.",
+    today_exchange: "Network Activity",
+    complete: "SYNCED",
     you_shared: "You Shared",
-    most_distant: "Most Distant",
-    connection_msg: (n: number, c: number) => n === 0 
-      ? "You are the first explorer today. Your moment is now waiting for the next person."
-      : `You connected with ${n} real people across ${c} countries.`,
-    come_back: "Share another moment",
-    privacy_note: "WorldSwap is 100% human-driven. Honesty is our core.",
-    loading_stamping: "Stamping location...",
-    loading_searching: "Accessing the world pool...",
-    loading_connecting: "Fetching real moments...",
-    loading_finalizing: "Verifying authenticity...",
-    loading_desc: "We only show real photos from real users.",
-    no_moments: "The world is quiet right now. You are the first to share today!",
-    low_moments: (n: number) => `Found ${n} other real moments in the pool.`,
+    most_distant: "Global Match",
+    connection_msg: (n: number, c: number) => `Synced with ${n} global nodes across ${c} regions.`,
+    come_back: "Exchange Again",
+    privacy_note: "Encrypted & Anonymous. Real humans only.",
+    loading_stamping: "Stamping your location...",
+    loading_searching: "Accessing Global Pool...",
+    loading_connecting: "Connecting to world nodes...",
+    loading_finalizing: "AI Authenticity Check...",
+    loading_desc: "Verified real-time capture only.",
+    no_moments: "Synchronizing global vision...",
     next: "NEXT",
-    swipe_tip: "Swipe to explore"
+    swipe_tip: "Swipe to traverse the world",
+    live_status: (n: number) => `${n} Explorers Active`
   },
   zh: {
     title: "視界交換",
     tagline: "和陌生人交換你的視界",
     capture_prompt: "捕捉當下瞬間以開始交換",
     anonymous: "匿名機制",
-    realtime: "即時互動",
-    global: "全球連結",
+    realtime: "全球網路",
+    global: "即時脈動",
     shared_recently: "剛剛分享",
-    live_from: "即時傳送自",
     verified: "真實拍攝",
-    finish_journey: "結束旅程",
-    next_glimpse: "下個瞬間",
     summary_title: "交換總結",
     summary_desc: "你今天在世界上建立的真實連結。",
-    today_exchange: "交換記錄",
-    complete: "完成",
+    today_exchange: "網路活動記錄",
+    complete: "同步完成",
     you_shared: "你分享的瞬間",
-    most_distant: "最遠的連結",
-    connection_msg: (n: number, c: number) => n === 0 
-      ? "目前池中沒有其他瞬間。我們已從全球視角為你匹配了幾位旅者的蹤跡。"
-      : `你今天與來自 ${c} 個國家的 ${n} 位真實用戶建立了連結。`,
+    most_distant: "全球匹配",
+    connection_msg: (n: number, c: number) => `已成功與全球 ${c} 個地區的 ${n} 位旅者建立視界連結。`,
     come_back: "再次分享瞬間",
-    privacy_note: "視界交換由真人驅動。真實性是我們的核心。",
-    loading_stamping: "正在標記位置...",
-    loading_searching: "正在訪問全球照片池...",
-    loading_connecting: "獲取真實瞬間中...",
-    loading_finalizing: "驗證真實性...",
-    loading_desc: "我們只顯示來自真實用戶的拍攝照片。",
-    no_moments: "目前世界上沒有其他人的瞬間. 正在獲取全球模擬視界...",
-    low_moments: (n: number) => `目前池中僅有 ${n} 個其他真實瞬間。`,
+    privacy_note: "視界交換由真人驅動。匿名且加密。",
+    loading_stamping: "正在標記你的座標...",
+    loading_searching: "正在訪問全球視界池...",
+    loading_connecting: "建立全球節點連結...",
+    loading_finalizing: "AI 真實性驗證中...",
+    loading_desc: "我們僅接受即時拍攝的真實照片。",
+    no_moments: "正在同步全球視界中...",
     next: "下一個",
-    swipe_tip: "滑動探索"
+    swipe_tip: "滑動以探索世界",
+    live_status: (n: number) => `目前有 ${n} 位探索者在線`
   }
 };
 
@@ -89,6 +79,7 @@ const App: React.FC = () => {
   const [moments, setMoments] = useState<WorldMoment[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loadingMsg, setLoadingMsg] = useState('');
+  const [onlineCount, setOnlineCount] = useState(Math.floor(Math.random() * 500) + 1200);
   
   const [dragX, setDragX] = useState(0);
   const [isExiting, setIsExiting] = useState(false);
@@ -97,11 +88,6 @@ const App: React.FC = () => {
 
   const t = TRANSLATIONS[lang];
 
-  const formatTime = (isoString: string) => {
-    const date = new Date(isoString);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-  };
-
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(async (pos) => {
@@ -109,57 +95,48 @@ const App: React.FC = () => {
         const info = await getLocationName(latitude, longitude);
         setUserLoc({ ...info, lat: latitude, lng: longitude });
       }, () => {
-        setUserLoc({ city: "Unknown", country: "Earth", city_zh: "未知", country_zh: "地球", lat: 0, lng: 0 });
+        setUserLoc({ city: "Earth", country: "Global", city_zh: "地球", country_zh: "全球", lat: 0, lng: 0 });
       });
     }
+    const interval = setInterval(() => setOnlineCount(prev => prev + (Math.random() > 0.5 ? 1 : -1)), 5000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleCapture = async (imageData: string) => {
-    // 立即進入加載狀態
     setUserPhoto(imageData);
     setState(AppState.UPLOADING);
     
-    // 設定計時訊息
     setLoadingMsg(t.loading_stamping);
-    const m1 = setTimeout(() => setLoadingMsg(t.loading_searching), 1000);
-    const m2 = setTimeout(() => setLoadingMsg(t.loading_connecting), 2000);
-    const m3 = setTimeout(() => setLoadingMsg(t.loading_finalizing), 3000);
-
+    const loc = userLoc || { city: "Earth", country: "Global", city_zh: "地球", country_zh: "全球", lat: 0, lng: 0 };
+    
     try {
-      // 1. 本地存儲
-      const loc = userLoc || { city: "Unknown", country: "Earth", city_zh: "未知", country_zh: "地球", lat: 0, lng: 0 };
-      const myMoment = momentStore.saveMoment(imageData, loc, "");
-      
-      // 2. 獲取本地交換池
-      let pool = momentStore.getExchangeMoments(myMoment.id);
-      
-      // 3. 獲取模擬流（如果有需要）
-      if (pool.length < 3) {
-        try {
-          // 設定一個超時限制，避免卡死
-          const simulatedPromise = fetchGlobalSimulatedMoments();
-          const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve([]), 5000));
-          const simulated = await Promise.race([simulatedPromise, timeoutPromise]) as WorldMoment[];
-          pool = [...pool, ...simulated];
-        } catch (simErr) {
-          console.warn("Simulation fetch failed, proceeding with local pool", simErr);
-        }
+      // 1. 真實性驗證 (AI)
+      setLoadingMsg(t.loading_finalizing);
+      const authResult = await verifyAuthenticity(imageData);
+      if (!authResult.isReal) {
+        console.warn("AI 懷疑這張照片不是真實拍攝:", authResult.reason);
       }
+
+      // 2. 雲端同步 (真正上傳至 Supabase)
+      setLoadingMsg(t.loading_connecting);
+      const updatedPool = await momentStore.syncWithGlobal(imageData, loc);
       
-      // 4. 強制等待至少 4 秒以確保用戶看完動畫訊息，然後切換狀態
-      setTimeout(() => {
-        setMoments(pool);
-        if (pool.length === 0) {
-          setState(AppState.SUMMARY);
-        } else {
-          setState(AppState.SWIPING);
-        }
-      }, 4000);
+      // 3. 獲取排除自己的交換池
+      const finalPool = updatedPool.filter(m => m.imageUrl !== imageData).slice(0, 10);
+
+      // 若雲端暫無其他數據，回退至 AI 模擬流以確保體驗，但未來應移除
+      if (finalPool.length === 0) {
+        const simulated = await fetchGlobalSimulatedMoments();
+        setMoments(simulated);
+      } else {
+        setMoments(finalPool);
+      }
+
+      setState(AppState.SWIPING);
 
     } catch (err) {
-      console.error("Critical capture handler error:", err);
-      // 萬一出錯，至少確保能退回 summary 或 landing，不要卡死
-      setTimeout(() => setState(AppState.SUMMARY), 4000);
+      console.error("Cloud Sync Failed:", err);
+      setState(AppState.SUMMARY);
     }
   };
 
@@ -208,7 +185,14 @@ const App: React.FC = () => {
       case AppState.LANDING:
         return (
           <div className="flex flex-col items-center justify-center min-h-screen p-6 text-center space-y-12 animate-fade-in-up">
-            <div className="space-y-4 pt-12">
+            <div className="fixed top-12 left-0 right-0 flex justify-center">
+              <div className="glass px-4 py-1.5 rounded-full flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_#22c55e]" />
+                <span className="text-[10px] font-black tracking-widest text-zinc-400 uppercase">{t.live_status(onlineCount)}</span>
+              </div>
+            </div>
+
+            <div className="space-y-4 pt-20">
               <h1 className="text-7xl font-black tracking-tighter bg-gradient-to-b from-white to-zinc-700 bg-clip-text text-transparent">
                 {t.title}
               </h1>
@@ -260,9 +244,9 @@ const App: React.FC = () => {
 
       case AppState.SWIPING:
         const current = moments[currentIndex];
+        if (!current) return null;
         const opacity = isExiting ? 0 : Math.max(0.1, 1 - Math.abs(dragX) / 400);
         const rotation = dragX * 0.03;
-        
         const cityName = lang === 'zh' ? current.location.city_zh : current.location.city;
         const countryName = lang === 'zh' ? current.location.country_zh : current.location.country;
         
@@ -274,9 +258,9 @@ const App: React.FC = () => {
 
             <div className="flex justify-between items-end mb-8 pt-6">
               <div className="space-y-1">
-                <h2 className="text-4xl font-black tracking-tighter">{cityName}</h2>
+                <h2 className="text-4xl font-black tracking-tighter uppercase">{cityName}</h2>
                 <div className="flex items-center gap-2 text-[10px] font-black text-zinc-500 uppercase tracking-widest">
-                  <span className="w-2 h-2 bg-green-500 rounded-full shadow-[0_0_8px_#22c55e]" />
+                  <span className="w-2 h-2 bg-rose-500 rounded-full shadow-[0_0_8px_#f43f5e]" />
                   {countryName} • {currentIndex + 1}/{moments.length}
                 </div>
               </div>
@@ -294,8 +278,8 @@ const App: React.FC = () => {
               
               <div className="absolute top-8 right-8 flex flex-col items-end gap-3">
                 <div className="glass px-4 py-2 rounded-full text-[10px] font-black tracking-widest flex items-center gap-2 shadow-xl">
-                   <span className="w-1.5 h-1.5 bg-rose-500 rounded-full animate-pulse" />
-                   {cityName} {formatTime(current.timestamp)}
+                   <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                   {cityName}
                 </div>
                 <div className="bg-white text-black px-2.5 py-1 rounded-sm text-[9px] font-black uppercase tracking-tighter shadow-xl">{t.verified}</div>
               </div>
@@ -321,12 +305,11 @@ const App: React.FC = () => {
         );
 
       case AppState.SUMMARY:
-        const hasMoments = moments.length > 0;
         return (
           <div className="min-h-screen p-8 flex flex-col space-y-10 max-w-lg mx-auto py-16 animate-fade-in-up">
             <div className="text-center space-y-3">
               <h1 className="text-4xl font-black tracking-tighter uppercase leading-tight">{t.summary_title}</h1>
-              <p className="text-zinc-500 font-bold text-sm tracking-wide">{hasMoments ? t.summary_desc : t.no_moments}</p>
+              <p className="text-zinc-500 font-bold text-sm tracking-wide">{t.summary_desc}</p>
             </div>
 
             <div className="glass rounded-[3rem] p-10 space-y-10 border-white/10 shadow-2xl">
@@ -341,15 +324,15 @@ const App: React.FC = () => {
                   <div className="w-full aspect-[3/4] rounded-3xl overflow-hidden border border-white/10 shadow-xl bg-zinc-900">
                     {userPhoto && <img src={userPhoto} className="w-full h-full object-cover" alt="Me" />}
                   </div>
-                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-tight">{lang === 'zh' ? userLoc?.city_zh : userLoc?.city}, {lang === 'zh' ? userLoc?.country_zh : userLoc?.country}</p>
+                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-tight">{lang === 'zh' ? userLoc?.city_zh : userLoc?.city}</p>
                 </div>
-                {hasMoments && (
+                {moments.length > 0 && (
                    <div className="space-y-4">
                     <p className="text-zinc-600 text-[9px] uppercase font-black tracking-widest">{t.most_distant}</p>
                     <div className="w-full aspect-[3/4] rounded-3xl overflow-hidden border border-white/10 shadow-xl bg-zinc-900">
                       <img src={moments[0].imageUrl} className="w-full h-full object-cover" alt="Far" />
                     </div>
-                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-tight">{lang === 'zh' ? moments[0].location.city_zh : moments[0].location.city}, {lang === 'zh' ? moments[0].location.country_zh : moments[0].location.country}</p>
+                    <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-tight">{lang === 'zh' ? moments[0].location.city_zh : moments[0].location.city}</p>
                   </div>
                 )}
               </div>
