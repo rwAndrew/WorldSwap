@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { AppState, WorldMoment, UserLocation, Language } from './types';
 import { getLocationName, fetchGlobalSimulatedMoments, verifyAuthenticity } from './services/geminiService';
-import { momentStore } from './services/momentStore';
+import { momentStore, isSupabaseConfigured } from './services/momentStore';
 import CameraView from './components/CameraView';
 import ReactionPicker from './components/ReactionPicker';
 
@@ -33,7 +33,9 @@ const TRANSLATIONS = {
     no_moments: "Synchronizing global vision...",
     next: "NEXT",
     swipe_tip: "Swipe to traverse the world",
-    live_status: (n: number) => `${n} Explorers Active`
+    live_status: (n: number) => `${n} Explorers Active`,
+    config_error_title: "Cloud Config Missing",
+    config_error_desc: "Please set SUPABASE_URL and SUPABASE_ANON_KEY in your environment."
   },
   zh: {
     title: "視界交換",
@@ -61,7 +63,9 @@ const TRANSLATIONS = {
     no_moments: "正在同步全球視界中...",
     next: "下一個",
     swipe_tip: "滑動以探索世界",
-    live_status: (n: number) => `目前有 ${n} 位探索者在線`
+    live_status: (n: number) => `目前有 ${n} 位探索者在線`,
+    config_error_title: "雲端配置缺失",
+    config_error_desc: "請在環境變數中設定 SUPABASE_URL 與 SUPABASE_ANON_KEY。"
   }
 };
 
@@ -103,6 +107,11 @@ const App: React.FC = () => {
   }, []);
 
   const handleCapture = async (imageData: string) => {
+    if (!isSupabaseConfigured) {
+      alert(t.config_error_desc);
+      return;
+    }
+
     setUserPhoto(imageData);
     setState(AppState.UPLOADING);
     
@@ -110,23 +119,20 @@ const App: React.FC = () => {
     const loc = userLoc || { city: "Earth", country: "Global", city_zh: "地球", country_zh: "全球", lat: 0, lng: 0 };
     
     try {
-      // 1. 真實性驗證 (AI)
       setLoadingMsg(t.loading_finalizing);
       const authResult = await verifyAuthenticity(imageData);
       if (!authResult.isReal) {
-        console.warn("AI 懷疑這張照片不是真實拍攝:", authResult.reason);
+        console.warn("AI 驗證可疑:", authResult.reason);
       }
 
-      // 2. 雲端同步
       setLoadingMsg(t.loading_connecting);
       const updatedPool = await momentStore.syncWithGlobal(imageData, loc);
       
-      // 3. 獲取交換池 (排除自己剛拍的這張)
-      // 注意：如果是第一個用戶，這裡會是空的
-      const cloudExchange = updatedPool.filter(m => !imageData.includes(m.imageUrl.split('/').pop() || 'never_match')).slice(0, 10);
+      // 過濾掉剛上傳的這張，獲取交換池
+      const currentFileName = updatedPool[0]?.imageUrl.split('/').pop();
+      const cloudExchange = updatedPool.filter(m => !m.imageUrl.includes(currentFileName || 'empty')).slice(0, 10);
 
       if (cloudExchange.length < 3) {
-        // 如果雲端真人照片太少，混入一些 AI 模擬的全球照片
         const simulated = await fetchGlobalSimulatedMoments();
         setMoments([...cloudExchange, ...simulated].slice(0, 10));
       } else {
@@ -136,7 +142,8 @@ const App: React.FC = () => {
       setState(AppState.SWIPING);
 
     } catch (err: any) {
-      alert(`交換失敗: ${err.message || '未知錯誤'}`);
+      console.error("Critical Sync Error:", err);
+      alert(`交換中斷: ${err.message}`);
       setState(AppState.LANDING);
     }
   };
@@ -182,6 +189,23 @@ const App: React.FC = () => {
   };
 
   const renderContent = () => {
+    // 若沒有配置 Supabase，顯示明顯警告
+    if (!isSupabaseConfigured) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-screen p-10 text-center space-y-6">
+          <div className="w-20 h-20 bg-amber-500/20 rounded-full flex items-center justify-center text-3xl animate-pulse">⚠️</div>
+          <h2 className="text-2xl font-black text-amber-500 uppercase tracking-tighter">{t.config_error_title}</h2>
+          <p className="text-zinc-400 max-w-xs leading-relaxed font-medium">{t.config_error_desc}</p>
+          <div className="glass p-6 rounded-3xl text-left font-mono text-[10px] text-zinc-500 space-y-2 max-w-sm">
+             <p>1. 建立 Supabase 專案</p>
+             <p>2. 執行 SQL 建立 moments 表</p>
+             <p>3. 建立 'moment-photos' Public Bucket</p>
+             <p>4. 在環境變數設定 URL 與 KEY</p>
+          </div>
+        </div>
+      );
+    }
+
     switch (state) {
       case AppState.LANDING:
         return (
