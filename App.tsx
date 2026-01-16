@@ -125,17 +125,16 @@ const App: React.FC = () => {
         console.warn("AI 驗證可疑:", authResult.reason);
       }
 
+      // 開始同步，傳入進度回調以更新 UI
       const { moments: updatedPool, selfId } = await momentStore.syncWithGlobal(
         imageData, 
         loc, 
         (msg) => setLoadingMsg(msg)
       );
       
-      // 使用 UUID 進行精確過濾，不再依賴檔名包含關係
       const cloudExchange = updatedPool.filter(m => m.id !== selfId).slice(0, 10);
 
       if (cloudExchange.length < 3) {
-        // 如果真人不夠，補充 AI 模擬數據
         const simulated = await fetchGlobalSimulatedMoments();
         setMoments([...cloudExchange, ...simulated].slice(0, 10));
       } else {
@@ -145,9 +144,11 @@ const App: React.FC = () => {
       setState(AppState.SWIPING);
 
     } catch (err: any) {
-      console.error("Critical Sync Error:", err);
-      alert(`交換中斷: ${err.message}`);
-      setState(AppState.LANDING);
+      console.error("同步失敗:", err);
+      // 提供更具體的錯誤回饋，而不僅僅是 alert
+      setLoadingMsg(`⚠️ 同步中斷: ${err.message}`);
+      // 3 秒後返回首頁
+      setTimeout(() => setState(AppState.LANDING), 4000);
     }
   };
 
@@ -192,17 +193,21 @@ const App: React.FC = () => {
   };
 
   const renderContent = () => {
+    // 檢查配置，若環境變數沒設好則提示用戶
     if (!isSupabaseConfigured) {
       return (
-        <div className="flex flex-col items-center justify-center min-h-screen p-10 text-center space-y-6">
-          <div className="w-20 h-20 bg-amber-500/20 rounded-full flex items-center justify-center text-3xl animate-pulse">⚠️</div>
-          <h2 className="text-2xl font-black text-amber-500 uppercase tracking-tighter">{t.config_error_title}</h2>
-          <p className="text-zinc-400 max-w-xs leading-relaxed font-medium">{t.config_error_desc}</p>
-          <div className="glass p-6 rounded-3xl text-left font-mono text-[10px] text-zinc-500 space-y-2 max-w-sm">
-             <p>1. 建立 Supabase 專案</p>
-             <p>2. 執行 SQL 建立 moments 表</p>
-             <p>3. 建立 'moment-photos' Public Bucket</p>
-             <p>4. 在環境變數設定 URL 與 KEY</p>
+        <div className="flex flex-col items-center justify-center min-h-screen p-10 text-center space-y-8 animate-fade-in-up">
+          <div className="w-24 h-24 bg-rose-500/10 rounded-full flex items-center justify-center text-5xl">⚙️</div>
+          <div className="space-y-4">
+            <h2 className="text-3xl font-black text-rose-500 uppercase tracking-tighter">{t.config_error_title}</h2>
+            <p className="text-zinc-400 max-w-xs leading-relaxed font-medium mx-auto">{t.config_error_desc}</p>
+          </div>
+          <div className="glass p-6 rounded-[2rem] text-left font-mono text-[10px] text-zinc-500 space-y-3 max-w-sm border-rose-500/20">
+             <p className="text-rose-400 font-bold">排除步驟：</p>
+             <p>1. 確保已在 Supabase 建立專案。</p>
+             <p>2. 在 Vercel 或環境中設定 SUPABASE_URL。</p>
+             <p>3. 建立 'moment-photos' Public Bucket。</p>
+             <p>4. 開啟資料表 RLS 並加入匿名 Insert 政策。</p>
           </div>
         </div>
       );
@@ -240,9 +245,13 @@ const App: React.FC = () => {
             <div className="absolute inset-[-15px] border border-dashed border-white/10 rounded-full animate-[spin_10s_linear_infinite]" />
             <div className="w-48 h-48 rounded-full overflow-hidden border border-white/20 shadow-2xl">{userPhoto && <img src={userPhoto} className="w-full h-full object-cover opacity-60 grayscale" alt="Me" />}</div>
           </div>
-          <div className="space-y-4">
-            <p className="text-2xl font-bold text-white tracking-tight">{loadingMsg}</p>
-            <p className="text-zinc-600 text-[9px] font-black tracking-[0.2em] uppercase">{t.loading_desc}</p>
+          <div className="space-y-4 max-w-xs mx-auto">
+            <p className="text-2xl font-bold text-white tracking-tight leading-snug">{loadingMsg}</p>
+            {loadingMsg.includes('⚠️') ? (
+               <button onClick={() => setState(AppState.LANDING)} className="mt-4 px-6 py-2 glass rounded-full text-xs font-bold text-white uppercase tracking-widest">返回首頁</button>
+            ) : (
+               <p className="text-zinc-600 text-[9px] font-black tracking-[0.2em] uppercase">{t.loading_desc}</p>
+            )}
           </div>
         </div>
       );
